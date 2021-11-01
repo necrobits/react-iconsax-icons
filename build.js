@@ -43,7 +43,8 @@ function svgFileToComponentName(file, variant) {
         throw `${variant} is not supported`;
     }
     const filename = path.parse(file).name;
-    const tempName = kebabToPascalCase(filename) + variant;
+    const normalizedName = filename.replace(/[^a-zA-Z0-9]/g, '-');
+    const tempName = kebabToPascalCase(normalizedName) + variant;
     if (tempName.match('^\\d')) {
         return 'I' + tempName;
     }
