@@ -1,0 +1,14 @@
+{
+  "name": "react-iconsax-icons",
+  "version": "1.0.0",
+  "description": "React components for Iconsax Icons ",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Necrobits",
+  "license": "MIT",
+  "devDependencies": {
+    "cheerio": "^1.0.0-rc.10"
+  }
+}
