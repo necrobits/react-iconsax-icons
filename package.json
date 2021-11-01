@@ -2,13 +2,19 @@
   "name": "react-iconsax-icons",
   "version": "1.0.0",
   "description": "React components for Iconsax Icons ",
-  "main": "build.js",
+  "main": "./dist/index.js",
   "scripts": {
+    "generate": "node build.js",
+    "build": "npm run generate",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Necrobits",
   "license": "MIT",
   "devDependencies": {
-    "cheerio": "^1.0.0-rc.10"
+    "cheerio": "^1.0.0-rc.10",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "prop-types": "^15.7.2"
   }
 }
