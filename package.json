@@ -3,18 +3,24 @@
   "version": "1.0.0",
   "description": "React components for Iconsax Icons ",
   "main": "./dist/index.js",
+  "module": "./dist/esm/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "generate": "node build.js",
-    "build": "npm run generate",
+    "build": "node build_with_babel.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Necrobits",
   "license": "MIT",
   "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/preset-react": "^7.14.5",
     "cheerio": "^1.0.0-rc.10",
-    "typescript": "^4.4.4"
+    "terser": "^5.7.2"
   },
-  "dependencies": {
-    "prop-types": "^15.7.2"
+  "peerDependencies": {
+    "react": "*"
   }
 }

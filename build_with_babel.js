@@ -1,10 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
-const { join } = require('path');
+const babel = require('@babel/core');
+const {minify} = require('terser');
 
 const IconDirectory = './icons';
 const BuildDirectory = './dist';
+const CJXDirectory = path.join(BuildDirectory, '');
+const ESMDirectory = path.join(BuildDirectory, 'esm');
+
 const Variants = ['Bold', 'Broken', 'Bulk', 'Linear', 'Outline', 'TwoTone'];
 const VariantSet = new Set(Variants);
 
@@ -57,7 +61,7 @@ function convertAttrsToReactAttrs(attrs) {
         if (key.match(/^(width|height)$/) && val.match('24')) val = '{size}';
         if (val.match(/^(#292D32)$/)) val = '{color}';
         const reactAttrName = kebabToCamelCase(key);
-        return { [reactAttrName]: val };
+        return {[reactAttrName]: val};
     });
     return Object.assign({}, ...pairs);
 }
@@ -70,7 +74,27 @@ function convertHtmlElementToReactElement(element) {
     return element;
 }
 
-function convertSVGToReactComponent(svgFile, variant) {
+function makeIconTyping(componentName) {
+    return `
+import * as React from 'react';
+declare function ${componentName}(props: React.SVGProps<SVGSVGElement>, ref: React.Ref<SVGSVGElement>): React.MemoExoticComponent<React.ForwardRefExoticComponent<React.RefAttributes<any>>>;
+export default ${componentName};
+`
+}
+
+const indexTypeDef = `
+/// <reference types="react" />
+import {FC, SVGAttributes, Ref} from 'react';
+export interface IconProps extends SVGAttributes<SVGElement> {
+    ref?: Ref<SVGSVGElement>;
+    color?: string;
+    size?: string | number;
+}
+export type Icon = FC<IconProps>;
+`
+
+
+async function transformSVGtoJSX(svgFile, variant, format) {
     const iconPath = getIconPath(svgFile, variant);
     const svgContent = fs.readFileSync(iconPath);
     const componentName = svgFileToComponentName(svgFile, variant);
@@ -81,8 +105,8 @@ function convertSVGToReactComponent(svgFile, variant) {
     })
     const reactStyleStr = elements.toString().replace(/\"?\{(.+?)\}\"?/g, "{$1}");
     const reactCode = `
-import React from 'react';
-import PropTypes from 'prop-types';
+import * as React from "react";
+import PropTypes from "prop-types";
 
 const ${componentName} = React.memo(React.forwardRef(({color, size, ...rest}, ref) => (
     <svg
@@ -108,64 +132,99 @@ ${componentName}.displayName = '${componentName}';
 
 export default ${componentName};
  `;
-    return reactCode;
+    const {code} = await babel.transformAsync(reactCode, {
+        presets: [['@babel/preset-react', {useBuiltIns: true}]],
+    });
+    if (format === 'esm') {
+        const {code: minifiedCode} = await minify(code);
+        return minifiedCode;
+    }
+
+    const replaceESM = code
+        .replace(
+            'import * as React from "react";',
+            'const React = require("react");'
+        )
+        .replace('export default', 'module.exports =');
+    const {code: minifiedCode} = await minify(replaceESM);
+    return minifiedCode;
 }
 
-function makeIconTyping(componentName) {
-    return `
-import React from "react";
-declare function ${componentName}(): React.MemoExoticComponent<React.ForwardRefExoticComponent<React.RefAttributes<any>>>;
-export default ${componentName};
-`
+function indexFileContent(componentNames, format, includeExtension = true) {
+    let content = '';
+    const extension = includeExtension ? '.js' : '';
+    componentNames.map((componentName) => {
+
+        const directoryString = `'./${componentName}${extension}'`;
+        content +=
+            format === 'esm'
+                ? `export { default as ${componentName} } from ${directoryString};\n`
+                : `module.exports.${componentName} = require(${directoryString});\n`;
+    });
+    return content;
 }
 
-const indexTypeDef = `
-/// <reference types="react" />
-import {FC, SVGAttributes, Ref} from 'react';
-export interface IconProps extends SVGAttributes<SVGElement> {
-    ref?: Ref<SVGSVGElement>;
-    color?: string;
-    size?: string | number;
-}
-export type Icon = FC<IconProps>;
-`
-
-function build() {
+async function build() {
     const svgFiles = findSVGInDirectory(path.join(IconDirectory, 'bold'));
     if (!fs.existsSync(BuildDirectory)) {
         fs.mkdirSync(BuildDirectory);
     }
 
+    if (!fs.existsSync(path.join(CJXDirectory))) {
+        fs.mkdirSync(CJXDirectory);
+    }
+
+    if (!fs.existsSync(path.join(ESMDirectory))) {
+        fs.mkdirSync(ESMDirectory);
+    }
+
     const components = [];
     console.log('Generating components...');
+    const length = svgFiles.length;
+    let i = 1;
     for (let svgFile of svgFiles) {
+        console.log('Creating', `${i++}/${length}`);
         for (let variant of Variants) {
             const componentName = svgFileToComponentName(svgFile, variant)
             const outFilename = componentName + '.js';
             const typingFilename = componentName + '.d.ts';
-            const outFilePath = path.join(BuildDirectory, outFilename);
-            const typingFilePath = path.join(BuildDirectory, typingFilename);
+
+            const cjsFilePath = path.join(CJXDirectory, outFilename);
+            const cjsTypingFilePath = path.join(CJXDirectory, typingFilename);
+
+            const esmFilePath = path.join(ESMDirectory,  outFilename);
+            const esmTypingFilePath = path.join(ESMDirectory,  typingFilename);
 
             if (!fs.existsSync(getIconPath(svgFile, variant))) {
                 continue;
             }
-            const reactCode = convertSVGToReactComponent(svgFile, variant);
+            const cjsCode = await transformSVGtoJSX(svgFile, variant, 'cjs');
+            const esmCode = await transformSVGtoJSX(svgFile, variant, 'esm');
             const typingCode = makeIconTyping(componentName);
-            fs.writeFileSync(outFilePath, reactCode);
-            fs.writeFileSync(typingFilePath, typingCode);
+
+            // cjs
+            fs.writeFileSync(cjsFilePath, cjsCode);
+            fs.writeFileSync(cjsTypingFilePath, typingCode);
+
+            // esm
+            fs.writeFileSync(esmFilePath, esmCode);
+            fs.writeFileSync(esmTypingFilePath, typingCode);
 
             components.push(componentName);
         }
     }
     // Write index.js
     console.log('Writing index...');
-    const indexCode = components.map(cName => `export {${cName}} from './${cName}';\n`).join('');
-    fs.writeFileSync(path.join(BuildDirectory, 'index.js'), indexCode);
+    fs.writeFileSync(path.join(CJXDirectory, 'index.js'), indexFileContent(components, 'cjs'), 'utf-8');
+    fs.writeFileSync(path.join(ESMDirectory, 'index.js'), indexFileContent(components, 'esm'), 'utf-8');
+
 
     console.log('Writing index.d.ts');
     const indexDecComponents = components.map(cName => `export const ${cName}: Icon;\n`).join('');
     const indexDeclarationCode = indexTypeDef + indexDecComponents;
-    fs.writeFileSync(path.join(BuildDirectory, 'index.d.ts'), indexDeclarationCode);
+    fs.writeFileSync(path.join(CJXDirectory, 'index.d.ts'), indexDeclarationCode);
+    fs.writeFileSync(path.join(ESMDirectory, 'index.d.ts'), indexDeclarationCode);
+
     console.log('Code generation completed.');
 }
 
