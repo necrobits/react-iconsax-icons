@@ -1,20 +1,32 @@
 {
   "name": "react-iconsax-icons",
   "version": "1.0.0",
-  "description": "React components for Iconsax Icons ",
+  "keywords": [
+    "iconsax",
+    "react"
+  ],
+  "description": "Iconsax Icons for ReactJS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/necrobits/react-iconsax-icons.git"
+  },
+  "homepage": "https://github.com/necrobits/react-iconsax-icons",
+  "bugs": "https://github.com/necrobits/react-iconsax-icons/issues",
   "main": "lib/index.js",
   "module": "lib/esm/index.js",
   "types": "lib/types",
+  "files": [
+    "lib",
+    "README.md"
+  ],
   "sideEffects": false,
   "scripts": {
     "prebuild": "rm -rf ./lib",
     "pregenerate": "rm -rf ./src",
     "generate": "node build.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup -c"
+    "build": "npm run generate && rollup -c"
   },
-  "author": "Necrobits",
-  "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.0.1",
     "@rollup/plugin-node-resolve": "^13.0.6",
@@ -31,5 +43,7 @@
   },
   "dependencies": {
     "prop-types": "^15.7.2"
-  }
+  },
+  "author": "Necrobits",
+  "license": "MIT"
 }

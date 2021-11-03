@@ -112,7 +112,13 @@ export interface IconProps {
 `
 
 function build() {
-    const svgFiles = findSVGInDirectory(path.join(IconDirectory, 'bold'));
+    let svgFiles = [];
+    for (let variant of Variants) {
+        const found = findSVGInDirectory(path.join(IconDirectory, variant));
+        console.log(`Found ${found.size} in ${variant}`);
+        svgFiles = svgFiles.concat(found);
+    }
+    const svgFileSet = new Set(svgFiles);
     if (!fs.existsSync(BuildDirectory)) {
         fs.mkdirSync(BuildDirectory);
     }
@@ -120,24 +126,19 @@ function build() {
     const components = [];
     console.log('Generating components...');
     let i = 1;
-    let length = svgFiles.length;
-    for (let svgFile of svgFiles) {
+    let length = svgFileSet.size;
+    for (let svgFile of svgFileSet) {
         console.log(`Generating ${i++}/${length}`)
         for (let variant of Variants) {
             const componentName = svgFileToComponentName(svgFile, variant)
             const outFilename = componentName + '.tsx';
-            // const typingFilename = componentName + '.d.ts';
             const outFilePath = path.join(BuildDirectory, outFilename);
-            // const typingFilePath = path.join(BuildDirectory, typingFilename);
 
             if (!fs.existsSync(getIconPath(svgFile, variant))) {
                 continue;
             }
             const reactCode = convertSVGToReactComponent(svgFile, variant);
-            // const typingCode = makeIconTyping(componentName);
             fs.writeFileSync(outFilePath, reactCode);
-            // fs.writeFileSync(typingFilePath, typingCode);
-
             components.push(componentName);
         }
     }
@@ -148,11 +149,6 @@ function build() {
     console.log('Writing index...');
     const indexCode = components.map(cName => `export { ${cName} } from "./${cName}";\n`).join('');
     fs.writeFileSync(path.join(BuildDirectory, 'index.ts'), indexCode);
-
-    // console.log('Writing index.d.ts');
-    // const indexDecComponents = components.map(cName => `export const ${cName}: Icon;\n`).join('');
-    // const indexDeclarationCode = indexTypeDef + indexDecComponents;
-    // fs.writeFileSync(path.join(BuildDirectory, 'index.d.ts'), indexDeclarationCode);
     console.log('Code generation completed.');
 }
 
