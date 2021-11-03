@@ -2,25 +2,34 @@
   "name": "react-iconsax-icons",
   "version": "1.0.0",
   "description": "React components for Iconsax Icons ",
-  "main": "./dist/index.js",
-  "module": "./dist/esm/index.js",
-  "files": [
-    "dist"
-  ],
+  "main": "lib/index.js",
+  "module": "lib/esm/index.js",
+  "types": "lib/types",
+  "sideEffects": false,
   "scripts": {
+    "prebuild": "rm -rf ./lib",
+    "pregenerate": "rm -rf ./src",
     "generate": "node build.js",
-    "build": "node build_with_babel.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rollup -c"
   },
   "author": "Necrobits",
   "license": "MIT",
   "devDependencies": {
-    "@babel/core": "^7.15.5",
-    "@babel/preset-react": "^7.14.5",
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-node-resolve": "^13.0.6",
+    "@types/react": "^17.0.34",
     "cheerio": "^1.0.0-rc.10",
-    "terser": "^5.7.2"
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "rollup": "^2.59.0",
+    "rollup-plugin-typescript2": "^0.30.0",
+    "typescript": "^4.4.4"
   },
   "peerDependencies": {
     "react": "*"
+  },
+  "dependencies": {
+    "prop-types": "^15.7.2"
   }
 }

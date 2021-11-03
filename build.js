@@ -1,10 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
-const { join } = require('path');
 
 const IconDirectory = './icons';
-const BuildDirectory = './dist';
+const BuildDirectory = './src';
 const Variants = ['Bold', 'Broken', 'Bulk', 'Linear', 'Outline', 'TwoTone'];
 const VariantSet = new Set(Variants);
 
@@ -81,10 +80,10 @@ function convertSVGToReactComponent(svgFile, variant) {
     })
     const reactStyleStr = elements.toString().replace(/\"?\{(.+?)\}\"?/g, "{$1}");
     const reactCode = `
-import React from 'react';
-import PropTypes from 'prop-types';
+import React from "react";
+import  { IconProps } from "./icon";
 
-const ${componentName} = React.memo(React.forwardRef(({color, size, ...rest}, ref) => (
+export const ${componentName} = React.memo<IconProps>(React.forwardRef<SVGSVGElement, IconProps>(({color, size, ...rest}, ref) => (
     <svg
         {...rest}
         xmlns="http://www.w3.org/2000/svg"
@@ -96,38 +95,20 @@ const ${componentName} = React.memo(React.forwardRef(({color, size, ...rest}, re
         ${reactStyleStr}
     </svg>
 )));
-${componentName}.propTypes = {
-    color: PropTypes.string,
-    size: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-};
-${componentName}.defaultProps = {
-    color: '#292D32',
-    size: '24'
- };
 ${componentName}.displayName = '${componentName}';
 
-export default ${componentName};
  `;
     return reactCode;
 }
 
-function makeIconTyping(componentName) {
-    return `
-import React from "react";
-declare function ${componentName}(): React.MemoExoticComponent<React.ForwardRefExoticComponent<React.RefAttributes<any>>>;
-export default ${componentName};
-`
-}
-
 const indexTypeDef = `
 /// <reference types="react" />
-import {FC, SVGAttributes, Ref} from 'react';
-export interface IconProps extends SVGAttributes<SVGElement> {
+import { SVGAttributes, Ref } from 'react';
+export interface IconProps {
     ref?: Ref<SVGSVGElement>;
     color?: string;
     size?: string | number;
 }
-export type Icon = FC<IconProps>;
 `
 
 function build() {
@@ -138,34 +119,40 @@ function build() {
 
     const components = [];
     console.log('Generating components...');
+    let i = 1;
+    let length = svgFiles.length;
     for (let svgFile of svgFiles) {
+        console.log(`Generating ${i++}/${length}`)
         for (let variant of Variants) {
             const componentName = svgFileToComponentName(svgFile, variant)
-            const outFilename = componentName + '.js';
-            const typingFilename = componentName + '.d.ts';
+            const outFilename = componentName + '.tsx';
+            // const typingFilename = componentName + '.d.ts';
             const outFilePath = path.join(BuildDirectory, outFilename);
-            const typingFilePath = path.join(BuildDirectory, typingFilename);
+            // const typingFilePath = path.join(BuildDirectory, typingFilename);
 
             if (!fs.existsSync(getIconPath(svgFile, variant))) {
                 continue;
             }
             const reactCode = convertSVGToReactComponent(svgFile, variant);
-            const typingCode = makeIconTyping(componentName);
+            // const typingCode = makeIconTyping(componentName);
             fs.writeFileSync(outFilePath, reactCode);
-            fs.writeFileSync(typingFilePath, typingCode);
+            // fs.writeFileSync(typingFilePath, typingCode);
 
             components.push(componentName);
         }
     }
-    // Write index.js
-    console.log('Writing index...');
-    const indexCode = components.map(cName => `export {${cName}} from './${cName}';\n`).join('');
-    fs.writeFileSync(path.join(BuildDirectory, 'index.js'), indexCode);
+    // Write icon.ts
+    fs.writeFileSync(path.join(BuildDirectory, 'icon.ts'), indexTypeDef);
 
-    console.log('Writing index.d.ts');
-    const indexDecComponents = components.map(cName => `export const ${cName}: Icon;\n`).join('');
-    const indexDeclarationCode = indexTypeDef + indexDecComponents;
-    fs.writeFileSync(path.join(BuildDirectory, 'index.d.ts'), indexDeclarationCode);
+    // Write index.ts
+    console.log('Writing index...');
+    const indexCode = components.map(cName => `export { ${cName} } from "./${cName}";\n`).join('');
+    fs.writeFileSync(path.join(BuildDirectory, 'index.ts'), indexCode);
+
+    // console.log('Writing index.d.ts');
+    // const indexDecComponents = components.map(cName => `export const ${cName}: Icon;\n`).join('');
+    // const indexDeclarationCode = indexTypeDef + indexDecComponents;
+    // fs.writeFileSync(path.join(BuildDirectory, 'index.d.ts'), indexDeclarationCode);
     console.log('Code generation completed.');
 }
 
