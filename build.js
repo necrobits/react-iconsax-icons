@@ -83,7 +83,7 @@ function convertSVGToReactComponent(svgFile, variant) {
 import React from "react";
 import  { IconProps } from "./icon";
 
-export const ${componentName} = React.memo<IconProps>(React.forwardRef<SVGSVGElement, IconProps>(({color, size, ...rest}, ref) => (
+const SVGIcon = React.forwardRef<SVGSVGElement, IconProps>(({color, size, ...rest}, ref) => (
     <svg
         {...rest}
         xmlns="http://www.w3.org/2000/svg"
@@ -94,9 +94,13 @@ export const ${componentName} = React.memo<IconProps>(React.forwardRef<SVGSVGEle
     >
         ${reactStyleStr}
     </svg>
-)));
+));
+SVGIcon.defaultProps = {
+    color: "#292D32",
+    size: 24
+};
+export const ${componentName} = React.memo<IconProps>(SVGIcon);
 ${componentName}.displayName = '${componentName}';
-
  `;
     return reactCode;
 }
