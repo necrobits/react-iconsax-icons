@@ -9,13 +9,13 @@ export default {
         {
             dir: 'lib',
             format: "cjs",
-            sourcemap: true,
+            sourcemap: false,
 
         },
         {
             dir: 'lib/esm',
             format: "esm",
-            sourcemap: true,
+            sourcemap: false,
 
         },
     ],
