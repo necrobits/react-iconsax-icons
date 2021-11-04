@@ -34,7 +34,7 @@ const MyComponent = () => {
 }; 
 ```
 
-If the SVG file name starts with a number, such as `24-support.svg`, just add `I` before the name: `<I24Support />`
+If the SVG file name starts with a number, such as `24-support.svg`, just add `I` before the name. For example `<I24SupportBold />`
 
 
 ## Props
